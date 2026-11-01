@@ -139,17 +139,26 @@ app.post('/esp/result', authEsp, express.raw({ type: '*/*', limit: '60mb' }), (r
 });
 
 // ===== COMPTEUR DE 1 A 10 =====
+// ===== COMPTEUR DE 1 A 10 =====
 let compteur = 0;
 let file = [];
+
+function flushCompteur() {
+  if (!queue.length && pollers.length && file.length) {
+    const p = pollers.shift();
+    clearTimeout(p.timer);
+    p.res.send('cpt\n' + file.shift());
+  }
+}
 
 setInterval(() => {
   compteur++;
   if (compteur > 10) compteur = 1;
   file.push(compteur);
   if (file.length > 20) file.shift();
+  flushCompteur();
 }, 1000);
 
-// L'ESP32 lit ici la prochaine valeur (vide s'il n'y en a pas)
 app.get('/compteur', authEsp, (req, res) => {
   lastSeen = Date.now();
   res.set('Cache-Control', 'no-store').type('text/plain')
